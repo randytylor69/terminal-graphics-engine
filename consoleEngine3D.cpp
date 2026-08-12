@@ -48,7 +48,7 @@ void Engine::delay(const int &time, const int &is_thread)
 void Engine::print(const std::string &input, const int &x, const int &y)
 {
     std::print("\033[{};{}H", y, x); // reversed cuz the syntax is {ROW};{COL}
-std::print("{}", input);
+    std::print("{}", input);
 }
 void Engine::clearScreen()
 {
