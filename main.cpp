@@ -145,15 +145,15 @@ int main()
 {
     engine.setCanonicalAndCursor(0);
     engine.clearScreen();
-    Vec2 v0 = {5, 5};
-    Vec2 v1 = {15, 15};
-    Vec2 v2 = {10, 30};
+    Vec2 v0 = {15, 5};
+    Vec2 v1 = {50, 15};
+    Vec2 v2 = {25, 30};
 
     drawTriangle(v0, v1, v2);
     print("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
 
     engine.setCanonicalAndCursor(1);
-    return 1;
+    
 }
 
 
