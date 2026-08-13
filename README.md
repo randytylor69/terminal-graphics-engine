@@ -15,8 +15,8 @@ So uhhh yeah if you'd like to render a mysterious rotating cube, or a super boun
 
 ## ScreenShots
 
-| ![Triangle](./screenshots/newscreenshot_045.jpg) |
-|---|
-| Rendering a tilted triangle |
+| ![Triangle](./screenshots/newscreenshot_045.jpg) | ![Cube](./screenshots/newscreenshot_052.jpg)
+|---|---|
+| A tilted triangle | A rotating cube (stationary in the picture but it's moving) |
 
 
