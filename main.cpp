@@ -3,6 +3,7 @@
 #include <print>
 #include <thread>
 #include <vector>
+#include <unistd.h>
 #include <cmath>
 #include <algorithm>
 using namespace std;
@@ -16,20 +17,6 @@ Engine engine;
 string symbols = "..++@@**--==";
 bool isFinished = false;
 
-/* defining the 3D cube, which consists of triangles & vertices */
-struct Vec3 {
-    float x, y, z;
-    Vec3() {}
-    Vec3(const float &xi, const float &yi, const float &zi)
-	: x(xi), y(yi), z(zi) {}
-};
-
-struct Vec2 {
-    float x, y;
-    Vec2() {}
-    Vec2(const float &xi, const float &yi)
-	: x(xi), y(yi) {}
-};
 
 vector<Vec3> cubeVertices {
     Vec3(-1, -1, -1), // 0
@@ -79,87 +66,6 @@ Vec2 project3DTo2D(Vec3 v)
 
 
 
-
-/* draws a straight horizontal line between two points, x0 and x1. */
-void drawScanLine(const int &y, const int &x0, const int &x1, char symbol)
-{
-    // first we need to figure out the start and the end
-    int left {x0};
-    int right {x1};
-    if (left > right)
-    {
-	left = x1; 
-	right = x0;
-    }
-    // then draw the line
-    for (int i = left; i <= right; i++)
-    {
-	string s(1, symbol); 
-	engine.print(s, i, y);
-    }
-}
-
-
-void drawFlatBottomTriangle(Vec2 top, Vec2 bottom1, Vec2 bottom2, char symbol)
-{
-    Vec2 pStart = top;
-    Vec2 pEnd = top;
-    while (pStart.y != bottom1.y) {
-
-	drawScanLine(pStart.y, pStart.x, pEnd.x, symbol);
-
-	/* modify pStart */
-	pStart.y += 1;
-	pStart.x += (bottom1.x - top.x) / (bottom1.y - top.y);
-
-	/* modify pEnd */
-	pEnd.y += 1;
-	pEnd.x += (bottom2.x - top.x) / (bottom2.y - top.y);
-    }
-    drawScanLine(pStart.y, pStart.x, pEnd.x, symbol);
-}
-
-void drawFlatTopTriangle(Vec2 bottom, Vec2 top1, Vec2 top2, char symbol)
-{
-    Vec2 pStart = bottom;
-    Vec2 pEnd = bottom;
-    while (pStart.y != top1.y) {
-
-	drawScanLine(pStart.y, pStart.x, pEnd.x, symbol);
-
-	/* modify pStart */
-	pStart.y -= 1;
-	pStart.x -= (bottom.x - top1.x) / (bottom.y - top1.y);
-
-	/* modify pEnd */
-	pEnd.y -= 1;
-	pEnd.x -= (bottom.x - top2.x) / (bottom.y - top2.y);
-    }
-    drawScanLine(pStart.y, pStart.x, pEnd.x, symbol);
-}
-
-void drawTriangle(Vec2 inputV0, Vec2 inputV1, Vec2 inputV2, char symbol)
-{
-    /* first sort the vertices by ascending Y */
-    vector<Vec2> sortedVertices = {inputV0, inputV1, inputV2};
-    sort(sortedVertices.begin(), sortedVertices.end(), 
-	[](const auto &L, const auto &R) {return L.y < R.y;}
-    );
-    Vec2 v0 = sortedVertices[0];
-    Vec2 v1 = sortedVertices[1];
-    Vec2 v2 = sortedVertices[2];
-
-    /* compute the middle point using right angled triangles */
-    Vec2 midpoint = {0, 0};
-    midpoint.y = v1.y;
-
-    midpoint.x = v0.x + (v2.x - v0.x) / (v2.y - v0.y) * (v1.y - v0.y);
-
-    /* split the triangle into 2 and use both functions to draw it */
-    drawFlatBottomTriangle(v0, midpoint, v1, symbol);
-    drawFlatTopTriangle(v2, midpoint, v1, symbol);
-}
-
 Vec3 rotate(Vec3 v, char axis, float rad) 
 {
     if (axis == 'x'){
@@ -181,28 +87,7 @@ Vec3 rotate(Vec3 v, char axis, float rad)
     }
 }
 
-Vec3 getVectorBetweenTwoPoints(Vec3 v, Vec3 w)
-{
-    return Vec3(
-	    w.x - v.x,
-	    w.y - v.y,
-	    w.z - v.z);
-}
 
-Vec3 getCrossProduct(Vec3 v, Vec3 w)
-{
-    return Vec3(
-	v.y * w.z - v.z * w.y,
-	-(v.x * w.z - v.z * w.x),
-	v.x * w.y- v.y * w.x
-    );
-
-}
-
-float getDotProduct(Vec3 v, Vec3 w)
-{
-    return v.x * w.x + v.y * w.y + v.z * w.z;
-}
 
 
 void drawCube(float radX, float radY, float radZ)
@@ -236,11 +121,11 @@ void drawCube(float radX, float radY, float radZ)
 	}
 	/* Back-face culling. skip current triangle based on dot product. */
 	/*   - first, get the normal vector */
-	Vec3 v = getVectorBetweenTwoPoints(transformed3DVertices[0],transformed3DVertices[1]);
-	Vec3 w = getVectorBetweenTwoPoints(transformed3DVertices[0],transformed3DVertices[2]);
-	Vec3 normalVector = getCrossProduct(v, w);
+	Vec3 v = engine.getVectorBetweenTwoVertices(transformed3DVertices[0],transformed3DVertices[1]);
+	Vec3 w = engine.getVectorBetweenTwoVertices(transformed3DVertices[0],transformed3DVertices[2]);
+	Vec3 normalVector = engine.getCrossProduct(v, w);
 	/*   - then, get the cross product */
-	float crossProduct = getDotProduct(normalVector, eyeVector);
+	float crossProduct = engine.getDotProduct(normalVector, eyeVector);
 	if (crossProduct >= 0) continue;
     
 	/* Project 3D to 2D */
@@ -248,7 +133,7 @@ void drawCube(float radX, float radY, float radZ)
 	for (int i=0; i<3; i++) 
 	    transformed2DVertices[i] = project3DTo2D(transformed3DVertices[i]);
 	/* Draw transformed triangle */
-	drawTriangle(
+	engine.drawTriangle(
 	    transformed2DVertices[0], 
 	    transformed2DVertices[1], 
 	    transformed2DVertices[2],
@@ -270,7 +155,7 @@ void loop(float radX, float radY, float radZ){
 	radY = fmod(radY + 0.2, 2*numbers::pi);
 	radZ = fmod(radZ + 0.2, 2*numbers::pi);
 
-	engine.delay(100000, 0);
+	usleep(100000);
     }
 }
 int main()
@@ -293,9 +178,10 @@ int main()
     }
     worker.join();
 
-    printf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
+    engine.clearScreen();
+    printf("Program Finished.\n");
     engine.setCanonicalAndCursor(1);
-    
+    return 0;
 }
 
 
