@@ -12,17 +12,15 @@
 /* terminal methods */
 void Engine::setCanonicalAndCursor(const int &cmd)
 {
-    // toggle canonical mode
-    tcgetattr(STDIN_FILENO, &tio);
-    cmd == 1 ? 
-	tio.c_iflag &= (~ICANON & ~ECHO):
-	tio.c_iflag |= (ICANON | ECHO);
-    tcsetattr(STDIN_FILENO, TCSANOW, &tio);
-
-    // toggle cursor (show or not show)
-    cmd == 1 ? 
-	std::print("\033[?25h"):
-	std::print("\033[?25l");
+    /* canonical changes */
+    tcgetattr(STDIN_FILENO, &tio); // get current terminal setting
+    cmd== 0 ? 
+	tio.c_lflag &= ~(ICANON | ECHO) : // disable canonical mode
+	tio.c_lflag |= (ICANON | ECHO); // enable canonical mode
+    tcsetattr(STDIN_FILENO,TCSANOW, &tio); // apply changes
+    
+    /* cursor changes */
+    cmd == 0 ? std::print("\033[?25l") : std::print("\033[?25h");
 }
 float Engine::getTerminalHeight()
 {

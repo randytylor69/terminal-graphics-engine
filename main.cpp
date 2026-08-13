@@ -1,6 +1,7 @@
 #include "consoleEngine3D.h"
 #include <string>
 #include <print>
+#include <thread>
 #include <vector>
 #include <cmath>
 #include <algorithm>
@@ -12,7 +13,8 @@ using namespace std;
 
 
 Engine engine;
-string symbols = "abcdefghijkl";
+string symbols = "..++@@**--==";
+bool isFinished = false;
 
 /* defining the 3D cube, which consists of triangles & vertices */
 struct Vec3 {
@@ -92,8 +94,7 @@ void drawScanLine(const int &y, const int &x0, const int &x1, char symbol)
     // then draw the line
     for (int i = left; i <= right; i++)
     {
-	char* pSymbol = &symbol;
-	string s(pSymbol, 1); // conversion function requires a ptr param
+	string s(1, symbol); 
 	engine.print(s, i, y);
     }
 }
@@ -159,10 +160,55 @@ void drawTriangle(Vec2 inputV0, Vec2 inputV1, Vec2 inputV2, char symbol)
     drawFlatTopTriangle(v2, midpoint, v1, symbol);
 }
 
+Vec3 rotate(Vec3 v, char axis, float rad) 
+{
+    if (axis == 'x'){
+	return Vec3(
+		v.x,
+		v.y*cos(rad) - v.z*sin(rad),
+		v.y*sin(rad) + v.z*cos(rad));
+    }
+    else if (axis=='y'){
+	return Vec3(
+	    cos(rad)*v.x + sin(rad)*v.z,
+	    v.y,
+	    -sin(rad)*v.x + cos(rad)*v.z);
+    } else {
+	return Vec3(
+		cos(rad)*v.x - sin(rad)*v.y,
+		sin(rad)*v.x + cos(rad)*v.y,
+		v.z);
+    }
+}
 
-void drawCube()
+Vec3 getVectorBetweenTwoPoints(Vec3 v, Vec3 w)
+{
+    return Vec3(
+	    w.x - v.x,
+	    w.y - v.y,
+	    w.z - v.z);
+}
+
+Vec3 getCrossProduct(Vec3 v, Vec3 w)
+{
+    return Vec3(
+	v.y * w.z - v.z * w.y,
+	-(v.x * w.z - v.z * w.x),
+	v.x * w.y- v.y * w.x
+    );
+
+}
+
+float getDotProduct(Vec3 v, Vec3 w)
+{
+    return v.x * w.x + v.y * w.y + v.z * w.z;
+}
+
+
+void drawCube(float radX, float radY, float radZ)
 {	
     int symbolIndex = 0;
+    Vec3 eyeVector {0,0,1}; // shoots from eye to screen, used for back-face culling
 
     for (auto triangle : cubeTriangles) 
     {
@@ -172,6 +218,11 @@ void drawCube()
 	    transformed3DVertices[i] = cubeVertices[triangle[i]];
 
 	    /* Transform each one of the 3 vertices */
+
+	    /* 0. Rotate each vertedx */
+	    transformed3DVertices[i] = rotate(transformed3DVertices[i], 'x', radX);
+	    transformed3DVertices[i] = rotate(transformed3DVertices[i], 'y', radY);
+	    transformed3DVertices[i] = rotate(transformed3DVertices[i], 'z', radZ);
 
 	    /* 1. Push it into the screen */
 	    transformed3DVertices[i].z += 10;
@@ -183,12 +234,20 @@ void drawCube()
 	    transformed3DVertices[i].x *= scaleFactor * 3;
 	    
 	}
-
-	/* project 3D to 2D */
+	/* Back-face culling. skip current triangle based on dot product. */
+	/*   - first, get the normal vector */
+	Vec3 v = getVectorBetweenTwoPoints(transformed3DVertices[0],transformed3DVertices[1]);
+	Vec3 w = getVectorBetweenTwoPoints(transformed3DVertices[0],transformed3DVertices[2]);
+	Vec3 normalVector = getCrossProduct(v, w);
+	/*   - then, get the cross product */
+	float crossProduct = getDotProduct(normalVector, eyeVector);
+	if (crossProduct >= 0) continue;
+    
+	/* Project 3D to 2D */
 	Vec2 transformed2DVertices[3];
 	for (int i=0; i<3; i++) 
 	    transformed2DVertices[i] = project3DTo2D(transformed3DVertices[i]);
-	/* draw transformed triangle */
+	/* Draw transformed triangle */
 	drawTriangle(
 	    transformed2DVertices[0], 
 	    transformed2DVertices[1], 
@@ -200,16 +259,40 @@ void drawCube()
     }
 }
 
+void loop(float radX, float radY, float radZ){
+
+    while(!isFinished){
+	engine.clearScreen();
+	drawCube(radX, radY, radZ);
+
+	/* update the rotational radians */
+	radX = fmod(radX + 0.2, 2*numbers::pi);
+	radY = fmod(radY + 0.2, 2*numbers::pi);
+	radZ = fmod(radZ + 0.2, 2*numbers::pi);
+
+	engine.delay(100000, 0);
+    }
+}
 int main()
 {
     engine.setCanonicalAndCursor(0);
-    engine.clearScreen();
     
-    drawCube();
-    // Vec2 v0 {10, 9};
-    // Vec2 v1 {30, 9};
-    // Vec2 v2 {15, 25};
-    // drawTriangle(v0, v1, v2);
+    float radX = 0.0;
+    float radY = 0.0;
+    float radZ = 0.0; 
+
+    thread worker(loop, ref(radX), ref(radY), ref(radZ));
+    char ch;
+    while (true){
+	ch = getchar();
+	if (ch == 'q')
+	{
+	    isFinished = true;
+	    break;
+	}
+    }
+    worker.join();
+
     printf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
     engine.setCanonicalAndCursor(1);
     
