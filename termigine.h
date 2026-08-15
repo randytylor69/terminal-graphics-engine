@@ -1,5 +1,5 @@
-#ifndef CONSOLE_ENGINE_3D_H_
-#define CONSOLE_ENGINE_3D_H_
+#ifndef TERMIGINE_H_
+#define TERMIGINE_H_
 
 #include <termios.h>
 #include <string>

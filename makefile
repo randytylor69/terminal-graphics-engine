@@ -1,11 +1,12 @@
 FLAGS = -std=c++23
 
-main.out : main.o consoleEngine3D.o
+main.out : main.o termigine.o
 	g++ ${FLAGS} $^ -o main.out
 
 main.o : main.cpp
 	g++ ${FLAGS} -c $^ -o main.o
 
-consoleEngine3D.o : consoleEngine3D.cpp
-	g++ ${FLAGS} -c $^ -o consoleEngine3D.o
+termigine.o : termigine.cpp
+	g++ ${FLAGS} -c $^ -o termigine.o
+
 
